@@ -1,0 +1,8 @@
+//
+// Created by Alex on 1/4/2026.
+//
+
+#ifndef SEMESTRALKA_SHARED_MEMORY_H
+#define SEMESTRALKA_SHARED_MEMORY_H
+
+#endif //SEMESTRALKA_SHARED_MEMORY_H
