@@ -3,8 +3,7 @@ project(semestralka C)
 
 set(CMAKE_C_STANDARD 11)
 add_executable(semestralka main.c
-        had.c
-        had.h
+        zdielane_prostriedky.h
         klient.c
         klient.h
         server.c
