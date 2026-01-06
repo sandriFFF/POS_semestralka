@@ -46,7 +46,7 @@ typedef enum {
 } TYPY_SVETOV;
 
 typedef enum {
-    NESKONCILA,
+    BEZI,
     SKONCILA,
     MENU,
 } STAV_HRY;
@@ -59,7 +59,6 @@ typedef struct {
 typedef struct {
     POZICIA telo[SIRKA_PLOCHY * VYSKA_PLOCHY];
     int aktualnaDlzka;
-    int hlavaHadika;
     _Bool jeZivy;
     SMER aktualnySmer;
 } HADIK;
@@ -74,6 +73,7 @@ typedef struct {
     int skore;
     int stopPoPauze;
     int casVhre;
+    AKCIA_HADIKA akcia;
 } SLOT_HRACA;
 
 typedef struct {
@@ -87,6 +87,10 @@ typedef struct {
     STAV_HRY stavHry;
     int zmiznutiePosledneho;
     int trvanieHry;
+    _Bool jeInicializovana;
+    int startHry;
+    int tik;
+    int poslednyTik;
 } HRA;
 
 

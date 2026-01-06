@@ -4,6 +4,8 @@
 
 #ifndef SEMESTRALKA_SHARED_MEMORY_H
 #define SEMESTRALKA_SHARED_MEMORY_H
+#define NAZOV_SHM '/SHMhadik'
+#define _POSIX_C_SOURCE 200809L
 #include "zdielane_prostriedky.h"
 
 typedef struct {
