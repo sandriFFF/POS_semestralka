@@ -10,5 +10,4 @@ add_executable(semestralka main.c
         server.h
         shared_memory.c
         shared_memory.h
-        hra.c
-        hra.h)
+)

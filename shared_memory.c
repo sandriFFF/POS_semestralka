@@ -45,6 +45,48 @@ void defaultNastaveniaHry(HRA* hra) {
 }
 
 int serverOtvorenie(SHM* pamat, _Bool inicializovana) {
+    if (!pamat) { return -1; }
+    pamat->fd = -1;
+    pamat->hra = NULL;
+    if (!inicializovana) {
+        shm_unlink(NAZOV_SHM);
+    }
+    int fd = shm_open(NAZOV_SHM, O_CREAT | O_RDWR, 0666);
+    if (fd < 0) return -1;
+
+    if (ftruncate(fd, (off_t)sizeof(HRA)) != 0) {
+        close(fd);
+        return -1;
+    }
+
+    void* mapa = mmap(NULL, sizeof(HRA), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (mapa == MAP_FAILED) {
+        close(fd);
+        return -1;
+    }
+    HRA* hra = (HRA*)mapa;
+    if (!inicializovana) {
+        memset(hra, 0, sizeof(HRA));
+
+        pthread_mutexattr_t ma;
+        pthread_mutexattr_init(&ma);
+        pthread_mutexattr_setpshared(&ma, PTHREAD_PROCESS_SHARED);
+        pthread_mutex_init(&hra.mutex, &ma);
+        pthread_mutexattr_destroy(&ma);
+        pthread_condattr_t ca;
+        pthread_condattr_init(&ca);
+        pthread_condattr_setpshared(&ca, PTHREAD_PROCESS_SHARED);
+        pthread_cond_init(&hra.signal, &ca);
+        pthread_condattr_destroy(&ca);
+
+        pthread_mutex_lock(&hra.mutex);
+        defaultNastaveniaHry(hra);
+        hra.inicializovana = true;
+        pthread_cond_broadcast(&hra.signal);
+        pthread_mutex_unlock(&hra.mutex);
+    }
+    pamat->fd = fd;
+    pamat->hra = hra;
     return 0;
 }
 
