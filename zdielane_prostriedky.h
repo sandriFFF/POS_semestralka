@@ -72,7 +72,7 @@ typedef struct {
     HADIK hadik;
     int skore;
     int stopPoPauze;
-    int casVhre;
+    int casVHre;
     AKCIA_HADIKA akcia;
 } SLOT_HRACA;
 
@@ -89,8 +89,6 @@ typedef struct {
     int trvanieHry;
     _Bool jeInicializovana;
     int startHry;
-    int tik;
-    int poslednyTik;
 } HRA;
 
 

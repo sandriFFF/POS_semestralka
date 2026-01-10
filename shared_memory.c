@@ -17,9 +17,7 @@ int casVMiliSekundach() {
 
 void defaultNastaveniaHry(HRA* hra) {
     hra->jeInicializovana = false;
-    hra->tik = 0;
     hra->startHry = casVMiliSekundach();
-    hra->poslednyTik = casVMiliSekundach();
     hra->stavHry = MENU;
     hra->hernyMod = STANDARDNY;
     hra->typSveta = BEZ_PREKAZOK;
