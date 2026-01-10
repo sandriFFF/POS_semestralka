@@ -4,6 +4,10 @@
 
 #include "klient.h"
 
+#include <ncurses.h>
+
+#include "shared_memory.h"
+
 void posliAkciu(HRA* hra, int indexHraca, AKCIA_HADIKA akciaH) {
 	if(indexHraca < 0 || indexHraca >= MAX_POCET_HRACOV) return;
 	pthread_mutex_lock(&hra->mutex);
@@ -49,29 +53,29 @@ void vytvorSnapshot(HRA* hra, SNAPSHOT* snapshot, int indexHraca) {
 		POZICIA ph = h->telo[0];
 		if (ph.suradnicaX >= 0 && ph.suradnicaY >= 0 &&
 			ph.suradnicaX < SIRKA_PLOCHY && ph.suradnicaY < VYSKA_PLOCHY) {
-			out->buf[ph.suradnicaY][ph.suradnicaX] = (i == 0) ? 'O' : '@';
+			snapshot->buf[ph.suradnicaY][ph.suradnicaX] = (i == 0) ? 'O' : '@';
 			}
 
 		for (int k = 1; k < h->aktualnaDlzka; ++k) {
 			POZICIA p = h->telo[k];
 			if (p.suradnicaX >= 0 && p.suradnicaY >= 0 &&
 				p.suradnicaX < SIRKA_PLOCHY && p.suradnicaY < VYSKA_PLOCHY) {
-				out->buf[p.suradnicaY][p.suradnicaX] = (i == 0) ? 'o' : '#';
+				snapshot->buf[p.suradnicaY][p.suradnicaX] = (i == 0) ? 'o' : '#';
 				}
 		}
 	}
 
 	for (int i = 0; i < MAX_POCET_HRACOV; ++i) {
-		out->skore[i] = hra->hraci[i].skore;
-		out->casVhre[i] = hra->hraci[i].casVhre;
-		out->stavHraca[i] = hra->hraci[i].stavHraca;
+		snapshot->skore[i] = hra->hraci[i].skore;
+		snapshot->casVhre[i] = hra->hraci[i].casVHre;
+		snapshot->stavHraca[i] = hra->hraci[i].stavHraca;
 	}
 }
 void vykresliSnapshot(const SNAPSHOT* s) {
 	erase();
 
 	mvprintw(0, 0, "Hadik | hrac=%d | stavHry=%d | mod=%d | svet=%d | cas=%.1fs",
-			 s->idxHraca, (int)s->stav, (int)s->mod, (int)s->svet, s->hernyCasMs / 1000.0);
+			 s->indexHraca, (int)s->stav, (int)s->mod, (int)s->svet, s->hernyCasMs / 1000.0);
 
 	mvprintw(1, 0, "H0: skore=%d cas=%.1fs stav=%d   |   H1: skore=%d cas=%.1fs stav=%d",
 			 s->skore[0], s->casVhre[0] / 1000.0, (int)s->stavHraca[0],
@@ -172,7 +176,7 @@ int spustiKlienta(int indexHraca) {
 	pthread_t renderTh;
 	RENDER_ARG arg;
 	arg.hra = hra;
-	arg.idxHraca = hracIndex;
+	arg.indexHraca = indexHraca;
 
 	if (pthread_create(&renderTh, NULL, renderVlakno, &arg) != 0) {
 		endwin();
@@ -183,7 +187,7 @@ int spustiKlienta(int indexHraca) {
 
 	while (1) {
 		int ch = getch();
-		spracujVstup(hra, hracIndex, ch);
+		spracujVstup(hra, indexHraca, ch);
 		usleep(5 * 1000);
 	}
 

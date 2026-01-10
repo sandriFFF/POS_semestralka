@@ -3,6 +3,9 @@
 //
 
 #include "server.h"
+#include "shared_memory.h"
+#include <stdbool.h>
+#include <stdlib.h>
 #include <time.h>
 
 int nahodneZIntervalu(int dolnaH, int hornaH) {
@@ -59,18 +62,23 @@ _Bool hadikObsahujePoziciu(const HADIK* hadik, POZICIA* pozicia) {
 }
 
 void posunHadika(POZICIA* novaPoziciaHlavy, HADIK* hadik, _Bool rast) {
-    if (rast) {
-        hadik->aktualnaDlzka++;
+    if (!novaPoziciaHlavy || !hadik || !hadik->jeZivy) return;
+
+    int max = SIRKA_PLOCHY * VYSKA_PLOCHY;
+
+    int staraDlzka = hadik->aktualnaDlzka;
+    if (staraDlzka < 1) staraDlzka = 1;
+
+    int novaDlzka = staraDlzka + (rast ? 1 : 0);
+    if (novaDlzka > max) novaDlzka = max;
+
+    for (int i = novaDlzka - 1; i >= 1; --i) {
+        if (!rast && i >= staraDlzka) continue;
+        hadik->telo[i] = hadik->telo[i - 1];
     }
-    POZICIA pom;
 
-    //TODO
-
-    for (int i = 0; i < hadik->aktualnaDlzka; i++) {
-        pom = hadik->telo[i];
-        hadik->telo[i] = novaPoziciaHlavy;
-    }
-
+    hadik->telo[0] = *novaPoziciaHlavy;
+    hadik->aktualnaDlzka = novaDlzka;
 }
 
 _Bool ovocieNaPloche(OVOCIE* ovocie) {
@@ -182,8 +190,8 @@ void vytvorHadika(HRA* hra, int indexHraca) {
     SLOT_HRACA* s = &hra->hraci[indexHraca];
     POZICIA sp;
     if (!najdiMiestoSpawnu(hra, &sp)) {
-        sp->suradnicaX = SIRKA_PLOCHY / 2;
-        sp->suradnicaY = VYSKA_PLOCHY / 2;
+        sp.suradnicaX = SIRKA_PLOCHY / 2;
+        sp.suradnicaY = VYSKA_PLOCHY / 2;
     }
     s->hadik.jeZivy = true;
     s->hadik.aktualnaDlzka = 3;

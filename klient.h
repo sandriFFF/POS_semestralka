@@ -5,17 +5,8 @@
 #ifndef SEMESTRALKA_KLIENT_H
 #define SEMESTRALKA_KLIENT_H
 #define _POSIX_C_SOURCE 200809L
-#include "shared_memory.h"
 #include "zdielane_prostriedky.h"
 
-#include <ctype.h>
-#include <ncurses.h>
-#include <pthread.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 typedef struct {
     char buf[VYSKA_PLOCHY][SIRKA_PLOCHY];
 
@@ -28,7 +19,7 @@ typedef struct {
     int casVhre[MAX_POCET_HRACOV];
     STAV_HRACA stavHraca[MAX_POCET_HRACOV];
 
-    int idxHraca;
+    int indexHraca;
 } SNAPSHOT;
 
 typedef struct {

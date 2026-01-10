@@ -6,15 +6,7 @@
 #define SEMESTRALKA_SERVER_H
 #define _POSIX_C_SOURCE 200809L
 
-#include "shared_memory.h"
 #include "zdielane_prostriedky.h"
-
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
 
 SMER otocenieDoprava(SMER smer);
 SMER otocenieDolava(SMER smer);

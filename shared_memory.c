@@ -1,10 +1,10 @@
 //
 // Created by Alex on 1/4/2026.
 //
+#define _POSIX_C_SOURCE 200809L
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include "shared_memory.h"
 
 #include <stdbool.h>
@@ -35,7 +35,7 @@ void defaultNastaveniaHry(HRA* hra) {
         slot->stavHraca = NEPRIPOJENY;
         slot->skore = 0;
         slot->stopPoPauze = 0;
-        slot->casVhre = 0;
+        slot->casVHre = 0;
         slot->hadik.aktualnaDlzka = 0;
         slot->hadik.jeZivy = false;
         slot->hadik.aktualnySmer = VPRAVO;
@@ -69,19 +69,19 @@ int serverOtvorenie(SHM* pamat, _Bool inicializovana) {
         pthread_mutexattr_t ma;
         pthread_mutexattr_init(&ma);
         pthread_mutexattr_setpshared(&ma, PTHREAD_PROCESS_SHARED);
-        pthread_mutex_init(&hra.mutex, &ma);
+        pthread_mutex_init(&hra->mutex, &ma);
         pthread_mutexattr_destroy(&ma);
         pthread_condattr_t ca;
         pthread_condattr_init(&ca);
         pthread_condattr_setpshared(&ca, PTHREAD_PROCESS_SHARED);
-        pthread_cond_init(&hra.signal, &ca);
+        pthread_cond_init(&hra->signal, &ca);
         pthread_condattr_destroy(&ca);
 
-        pthread_mutex_lock(&hra.mutex);
+        pthread_mutex_lock(&hra->mutex);
         defaultNastaveniaHry(hra);
-        hra.inicializovana = true;
-        pthread_cond_broadcast(&hra.signal);
-        pthread_mutex_unlock(&hra.mutex);
+        hra->jeInicializovana = true;
+        pthread_cond_broadcast(&hra->signal);
+        pthread_mutex_unlock(&hra->mutex);
     }
     pamat->fd = fd;
     pamat->hra = hra;
@@ -106,7 +106,7 @@ int klientOtvorenie(SHM* pamat, _Bool inicializovana) {
 
     int start = casVMiliSekundach();
     while (1) {
-        if (pamat->hra->inicializovana == 1) {
+        if (pamat->hra->jeInicializovana == 1) {
             return 0;
         }
 
