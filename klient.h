@@ -4,7 +4,6 @@
 
 #ifndef SEMESTRALKA_KLIENT_H
 #define SEMESTRALKA_KLIENT_H
-#define _POSIX_C_SOURCE 200809L
 #include "zdielane_prostriedky.h"
 
 typedef struct {

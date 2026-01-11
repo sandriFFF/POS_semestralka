@@ -6,13 +6,14 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "shared_memory.h"
-
+#include <unistd.h>
 #include <stdbool.h>
+#include <string.h>
 
-int casVMiliSekundach() {
-    struct timeval tv;
-    mingw_gettimeofday(&tv, NULL);
-    return (((int)tv.tv_sec)*1000)+(tv.tv_usec/1000);
+int casVMiliSekundach(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (int)(ts.tv_sec * 1000L + ts.tv_nsec / 1000000L);
 }
 
 void defaultNastaveniaHry(HRA* hra) {

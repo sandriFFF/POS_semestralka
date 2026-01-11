@@ -2,12 +2,18 @@ cmake_minimum_required(VERSION 3.25)
 project(semestralka C)
 
 set(CMAKE_C_STANDARD 11)
-add_executable(semestralka main.c
-        zdielane_prostriedky.h
+set(CMAKE_C_STANDARD_REQUIRED ON)
+
+add_executable(semestralka
+        main.c
         klient.c
-        klient.h
         server.c
-        server.h
         shared_memory.c
-        shared_memory.h
 )
+
+find_package(Threads REQUIRED)
+target_link_libraries(semestralka PRIVATE Threads::Threads)
+
+find_package(Curses REQUIRED)
+target_include_directories(semestralka PRIVATE ${CURSES_INCLUDE_DIRS})
+target_link_libraries(semestralka PRIVATE ${CURSES_LIBRARIES})

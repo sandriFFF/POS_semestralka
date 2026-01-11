@@ -154,8 +154,10 @@ void* renderVlakno(void* arg) {
 int spustiKlienta(int indexHraca) {
 	SHM shm;
 	if (klientOtvorenie(&shm, 1) != 0) {
-		return -2;
+		perror("klientOtvorenie");
+		return 254;
 	}
+
 
 	HRA* hra = shm.hra;
 

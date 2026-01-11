@@ -5,6 +5,7 @@
 #include "server.h"
 #include "shared_memory.h"
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
@@ -348,7 +349,8 @@ void skontrolujKoniecHry(HRA* hra) {
 }
 int spustiServer(_Bool novaInicializacia) {
     SHM pamat;
-    if (serverOtvorenie(&pamat, novaInicializacia) != 0) {
+    if (serverOtvorenie(&pamat, novaInicializacia ? 0 : 1) != 0) {
+        perror("serverOtvorenie");
         return -1;
     }
     srand(time(NULL));

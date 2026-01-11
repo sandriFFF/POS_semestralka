@@ -8,7 +8,6 @@
 #define SIRKA_PLOCHY 60
 #define VYSKA_PLOCHY 60
 #include <pthread.h>
-#include <stdint.h>
 
 typedef enum {
     HORE,
