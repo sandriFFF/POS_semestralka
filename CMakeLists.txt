@@ -13,7 +13,3 @@ add_executable(semestralka
 
 find_package(Threads REQUIRED)
 target_link_libraries(semestralka PRIVATE Threads::Threads)
-
-find_package(Curses REQUIRED)
-target_include_directories(semestralka PRIVATE ${CURSES_INCLUDE_DIRS})
-target_link_libraries(semestralka PRIVATE ${CURSES_LIBRARIES})

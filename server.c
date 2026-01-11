@@ -10,7 +10,15 @@
 #include <time.h>
 
 int nahodneZIntervalu(int dolnaH, int hornaH) {
-    return rand() % (hornaH - 1) + dolnaH;
+    // Inclusive range [dolnaH, hornaH].
+    if (hornaH < dolnaH) {
+        int t = dolnaH;
+        dolnaH = hornaH;
+        hornaH = t;
+    }
+    int span = hornaH - dolnaH + 1;
+    if (span <= 0) return dolnaH;
+    return (rand() % span) + dolnaH;
 }
 
 SMER otocenieDoprava(SMER smer) {
@@ -31,7 +39,7 @@ SMER otocenieDolava(SMER smer) {
         default: return smer;
     }
 }
-_Bool rovnakaPozicia(POZICIA* poziciaA, POZICIA* poziciaB) {
+_Bool rovnakaPozicia(const POZICIA* poziciaA, const POZICIA* poziciaB) {
     return (poziciaA->suradnicaX == poziciaB->suradnicaX && poziciaA->suradnicaY == poziciaB->suradnicaY);
 }
 
@@ -156,7 +164,8 @@ _Bool jePrekazka(HRA* hra, POZICIA* pozicia) {
     if (hra->typSveta != S_PREKAZKAMI) {
         return false;
     }
-    return hra->hernaPlocha[pozicia->suradnicaX][pozicia->suradnicaY] == 'X';
+    // hernaPlocha is indexed as [y][x]
+    return hra->hernaPlocha[pozicia->suradnicaY][pozicia->suradnicaX] == 'X';
 }
 _Bool jePoziciaObsadenaHadikom(HRA* hra, POZICIA* pozicia) {
     for (int i = 0; i < MAX_POCET_HRACOV; i++) {
@@ -347,7 +356,33 @@ void skontrolujKoniecHry(HRA* hra) {
         }
     }
 }
-int spustiServer(_Bool novaInicializacia) {
+
+static void vycistiPlochu(HRA* hra) {
+    for (int y = 0; y < VYSKA_PLOCHY; ++y) {
+        for (int x = 0; x < SIRKA_PLOCHY; ++x) {
+            hra->hernaPlocha[y][x] = ' ';
+        }
+    }
+}
+
+void generujPrekazkyBodky(HRA* hra, int pocet) {
+    if (!hra || pocet <= 0) return;
+    int maxBuniek = (SIRKA_PLOCHY - 2) * (VYSKA_PLOCHY - 2);
+    if (pocet > maxBuniek) pocet = maxBuniek;
+
+    int vlozene = 0;
+    int pokusy = 0;
+    const int maxPokusov = 200000;
+    while (vlozene < pocet && pokusy++ < maxPokusov) {
+        int x = nahodneZIntervalu(1, SIRKA_PLOCHY - 2);
+        int y = nahodneZIntervalu(1, VYSKA_PLOCHY - 2);
+        if (hra->hernaPlocha[y][x] != ' ') continue;
+        hra->hernaPlocha[y][x] = 'X';
+        vlozene++;
+    }
+}
+
+int spustiServer(_Bool novaInicializacia, TYPY_SVETOV typSveta) {
     SHM pamat;
     if (serverOtvorenie(&pamat, novaInicializacia ? 0 : 1) != 0) {
         perror("serverOtvorenie");
@@ -357,6 +392,22 @@ int spustiServer(_Bool novaInicializacia) {
     HRA* hra = pamat.hra;
     const int tik = 100;
     pthread_mutex_lock(&hra->mutex);
+
+    // Ak sa robi nova inicializacia, nastav svet a priprav plochu.
+    if (novaInicializacia) {
+        hra->typSveta = typSveta;
+        vycistiPlochu(hra);
+        if (hra->typSveta == S_PREKAZKAMI) {
+            // ~5% plochy (pre 60x60 je to 180). Daj kludne viac/menej.
+            int pocet = (SIRKA_PLOCHY * VYSKA_PLOCHY) / 20;
+            generujPrekazkyBodky(hra, pocet);
+        }
+        // Reset ovocia (nech sa znovu vygeneruje podla zivych hadikov).
+        for (int i = 0; i < MAX_POCET_HRACOV; i++) {
+            deaktivujOvocie(&hra->ovocie[i]);
+        }
+    }
+
     hra->stavHry = BEZI;
     hra->startHry = casVMiliSekundach();
     hra->zmiznutiePosledneho = 0;

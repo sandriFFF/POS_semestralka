@@ -11,6 +11,7 @@ typedef struct {
     HRA* hra;
     int fd;
 } SHM;
+
 int casVMiliSekundach();
 int serverOtvorenie(SHM* pamat, _Bool inicializovana);
 int klientOtvorenie(SHM* pamat, _Bool inicializovana);

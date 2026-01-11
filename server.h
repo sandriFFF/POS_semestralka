@@ -10,7 +10,7 @@
 SMER otocenieDoprava(SMER smer);
 SMER otocenieDolava(SMER smer);
 
-_Bool rovnakaPozicia(POZICIA* poziciaA, POZICIA* poziciaB);
+_Bool rovnakaPozicia(const POZICIA* poziciaA, const POZICIA* poziciaB);
 POZICIA dalsiaPozicia(POZICIA* pozicia, SMER smer);
 _Bool jeVnutriPlochy(POZICIA* pozicia);
 _Bool hadikObsahujePoziciu(const HADIK* hadik, POZICIA* pozicia);
@@ -31,6 +31,6 @@ void vytvorHadika(HRA* hra, int indexHraca);
 void spracujAkcie(HRA* hra);
 void pohniHadikov(HRA* hra);
 void skontrolujKoniecHry(HRA* hra);
-int spustiServer(_Bool novaInicializacia);
+int spustiServer(_Bool novaInicializacia, TYPY_SVETOV typSveta);
 
 #endif //SEMESTRALKA_SERVER_H

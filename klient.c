@@ -4,7 +4,13 @@
 
 #include "klient.h"
 
-#include <ncurses.h>
+#include <stdio.h>
+
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <termios.h>
+#include <unistd.h>
 
 #include "shared_memory.h"
 
@@ -33,9 +39,9 @@ void vytvorSnapshot(HRA* hra, SNAPSHOT* snapshot, int indexHraca) {
 	snapshot->stav = hra->stavHry;
 	snapshot->mod = hra->hernyMod;
 	snapshot->svet = hra->typSveta;
-	for (int i = 0; i < SIRKA_PLOCHY; i++) {
-		for (int j = 0; j < VYSKA_PLOCHY; j++) {
-			snapshot->buf[i][j] = hra->hernaPlocha[i][j];
+	for (int y = 0; y < VYSKA_PLOCHY; y++) {
+		for (int x = 0; x < SIRKA_PLOCHY; x++) {
+			snapshot->buf[y][x] = hra->hernaPlocha[y][x];
 		}
 	}
 	snapshot->hernyCasMs = hra->trvanieHry;
@@ -43,7 +49,7 @@ void vytvorSnapshot(HRA* hra, SNAPSHOT* snapshot, int indexHraca) {
 		int x = hra->ovocie[i].suradnice.suradnicaX;
 		int y = hra->ovocie[i].suradnice.suradnicaY;
 		if (x >= 0 && x < SIRKA_PLOCHY && y >= 0 && y < VYSKA_PLOCHY) {
-			snapshot->buf[x][y] = '*';
+			snapshot->buf[y][x] = '*';
 		}
 	}
 	for (int i = 0; i < MAX_POCET_HRACOV; ++i) {
@@ -71,50 +77,107 @@ void vytvorSnapshot(HRA* hra, SNAPSHOT* snapshot, int indexHraca) {
 		snapshot->stavHraca[i] = hra->hraci[i].stavHraca;
 	}
 }
+
+// --- Minimal terminal UI --------------------------------------
+static struct termios g_oldTerm;
+static int g_oldFlags = -1;
+static volatile sig_atomic_t g_running = 1;
+
+static void onSigInt(int sig) {
+	(void)sig;
+	g_running = 0;
+}
+
+static void terminalEnableRaw(void) {
+	// Save current settings
+	tcgetattr(STDIN_FILENO, &g_oldTerm);
+	struct termios raw = g_oldTerm;
+	raw.c_lflag &= (tcflag_t)~(ECHO | ICANON);
+	raw.c_cc[VMIN] = 0;
+	raw.c_cc[VTIME] = 0;
+	tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+
+	// Make stdin non-blocking
+	g_oldFlags = fcntl(STDIN_FILENO, F_GETFL, 0);
+	fcntl(STDIN_FILENO, F_SETFL, g_oldFlags | O_NONBLOCK);
+}
+
+static void terminalDisableRaw(void) {
+	// Restore terminal
+	tcsetattr(STDIN_FILENO, TCSANOW, &g_oldTerm);
+	if (g_oldFlags != -1) {
+		fcntl(STDIN_FILENO, F_SETFL, g_oldFlags);
+	}
+	// Show cursor
+	printf("\033[?25h\n");
+	fflush(stdout);
+}
+
+static int readKeyNonBlocking(void) {
+	unsigned char c;
+	ssize_t n = read(STDIN_FILENO, &c, 1);
+	if (n == 0) return -1;
+	if (n < 0) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) return -1;
+		return -1;
+	}
+	if (c != 27) return (int)c; // not ESC
+
+	// Try to parse arrow keys: ESC [ D / C
+	unsigned char seq[2];
+	ssize_t n1 = read(STDIN_FILENO, &seq[0], 1);
+	ssize_t n2 = read(STDIN_FILENO, &seq[1], 1);
+	if (n1 == 1 && n2 == 1 && seq[0] == '[') {
+		if (seq[1] == 'D') return 1000; // LEFT
+		if (seq[1] == 'C') return 1001; // RIGHT
+	}
+	return -1;
+}
+
 void vykresliSnapshot(const SNAPSHOT* s) {
-	erase();
+	// Clear screen, move cursor home, hide cursor
+	printf("\033[2J\033[H\033[?25l");
+	printf("Hadik | hrac=%d | stavHry=%d | mod=%d | svet=%d | cas=%.1fs\n",
+	       s->indexHraca, (int)s->stav, (int)s->mod, (int)s->svet, s->hernyCasMs / 1000.0);
+	printf("H0: skore=%d cas=%.1fs stav=%d   |   H1: skore=%d cas=%.1fs stav=%d\n",
+	       s->skore[0], s->casVhre[0] / 1000.0, (int)s->stavHraca[0],
+	       s->skore[1], s->casVhre[1] / 1000.0, (int)s->stavHraca[1]);
+	printf("Ovl: s=pripoj p=pauza c=pokracuj l=odid q=quit | sipky L/R alebo a/d = zaboc\n\n");
 
-	mvprintw(0, 0, "Hadik | hrac=%d | stavHry=%d | mod=%d | svet=%d | cas=%.1fs",
-			 s->indexHraca, (int)s->stav, (int)s->mod, (int)s->svet, s->hernyCasMs / 1000.0);
-
-	mvprintw(1, 0, "H0: skore=%d cas=%.1fs stav=%d   |   H1: skore=%d cas=%.1fs stav=%d",
-			 s->skore[0], s->casVhre[0] / 1000.0, (int)s->stavHraca[0],
-			 s->skore[1], s->casVhre[1] / 1000.0, (int)s->stavHraca[1]);
-
-	mvprintw(2, 0, "Ovl: j=pripoj p=pauza r=pokracuj l=odid q=quit | sipky L/R alebo a/d = zaboc");
-
-	int top = 4;
-	int left = 0;
-
-	mvaddch(top, left, '+');
-	for (int x = 0; x < SIRKA_PLOCHY; ++x) mvaddch(top, left + 1 + x, '-');
-	mvaddch(top, left + 1 + SIRKA_PLOCHY, '+');
+	// top border
+	putchar('+');
+	for (int x = 0; x < SIRKA_PLOCHY; ++x) putchar('-');
+	putchar('+');
+	putchar('\n');
 
 	for (int y = 0; y < VYSKA_PLOCHY; ++y) {
-		mvaddch(top + 1 + y, left, '|');
+		putchar('|');
 		for (int x = 0; x < SIRKA_PLOCHY; ++x) {
-			mvaddch(top + 1 + y, left + 1 + x, s->buf[y][x]);
+			putchar(s->buf[y][x]);
 		}
-		mvaddch(top + 1 + y, left + 1 + SIRKA_PLOCHY, '|');
+		putchar('|');
+		putchar('\n');
 	}
 
-	mvaddch(top + 1 + VYSKA_PLOCHY, left, '+');
-	for (int x = 0; x < SIRKA_PLOCHY; ++x) mvaddch(top + 1 + VYSKA_PLOCHY, left + 1 + x, '-');
-	mvaddch(top + 1 + VYSKA_PLOCHY, left + 1 + SIRKA_PLOCHY, '+');
+	// bottom border
+	putchar('+');
+	for (int x = 0; x < SIRKA_PLOCHY; ++x) putchar('-');
+	putchar('+');
+	putchar('\n');
 
 	if (s->stav == MENU) {
-		mvprintw(top + 2 + VYSKA_PLOCHY, 0, "Hra je v MENU (server este nebezi alebo nebola spustena).");
+		printf("\nHra je v MENU (server este nebezi alebo nebola spustena).\n");
 	} else if (s->stav == SKONCILA) {
-		mvprintw(top + 2 + VYSKA_PLOCHY, 0, "Hra SKONCILA. (Klient moze len citat stav)");
+		printf("\nHra SKONCILA. (Klient moze len citat stav)\n");
 	}
 
-	refresh();
+	fflush(stdout);
 }
 
 void spracujVstup(HRA* hra, int indexHraca, int ch) {
-	if (ch == 'a') {
+	if (ch == 1000 || ch == 'a') {
 		posliAkciu(hra, indexHraca, ZABOC_DOLAVA);
-	} else if (ch == 'd') {
+	} else if (ch == 1001 || ch == 'd') {
 		posliAkciu(hra, indexHraca, ZABOC_DOPRAVA);
 	} else if (ch == 'p') {
 		posliAkciu(hra, indexHraca, PAUZA);
@@ -138,7 +201,7 @@ void* renderVlakno(void* arg) {
 	pthread_mutex_unlock(&hra->mutex);
 	vykresliSnapshot(&snapshot);
 	pthread_mutex_lock(&hra->mutex);
-	while (1) {
+	while (g_running) {
 		if (hra->stavHry == SKONCILA) break;
 		pthread_cond_wait(&hra->signal, &hra->mutex);
 		if (hra->stavHry == SKONCILA) break;
@@ -167,13 +230,9 @@ int spustiKlienta(int indexHraca) {
 	}
 	if (indexHraca >= MAX_POCET_HRACOV) indexHraca = MAX_POCET_HRACOV - 1;
 
-	// ncurses init - chat
-	initscr();
-	cbreak();
-	noecho();
-	keypad(stdscr, TRUE);
-	nodelay(stdscr, TRUE);
-	curs_set(0);
+	// terminal init
+	signal(SIGINT, onSigInt);
+	terminalEnableRaw();
 
 	pthread_t renderTh;
 	RENDER_ARG arg;
@@ -181,15 +240,22 @@ int spustiKlienta(int indexHraca) {
 	arg.indexHraca = indexHraca;
 
 	if (pthread_create(&renderTh, NULL, renderVlakno, &arg) != 0) {
-		endwin();
+		terminalDisableRaw();
 		zatvorSHM(&shm);
 		fprintf(stderr, "Nepodarilo sa spustit render thread.\n");
 		return 1;
 	}
 
-	while (1) {
-		int ch = getch();
-		spracujVstup(hra, indexHraca, ch);
+	while (g_running) {
+		int ch = readKeyNonBlocking();
+		if (ch == 'q') {
+			g_running = 0;
+			posliAkciu(hra, indexHraca, OPUSTENIE_HRY);
+			break;
+		}
+		if (ch != -1) {
+			spracujVstup(hra, indexHraca, ch);
+		}
 		usleep(5 * 1000);
 	}
 
@@ -199,7 +265,8 @@ int spustiKlienta(int indexHraca) {
 
 	pthread_join(renderTh, NULL);
 
-	endwin();
+	terminalDisableRaw();
 	zatvorSHM(&shm);
 	return 0;
 }
+

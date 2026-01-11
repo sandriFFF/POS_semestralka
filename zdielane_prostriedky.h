@@ -6,7 +6,7 @@
 #define SEMESTRALKA_HAD_H
 #define MAX_POCET_HRACOV 2
 #define SIRKA_PLOCHY 60
-#define VYSKA_PLOCHY 60
+#define VYSKA_PLOCHY 30
 #include <pthread.h>
 
 typedef enum {
@@ -89,6 +89,5 @@ typedef struct {
     _Bool jeInicializovana;
     int startHry;
 } HRA;
-
 
 #endif //SEMESTRALKA_HAD_H

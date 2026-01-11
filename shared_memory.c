@@ -10,6 +10,14 @@
 #include <stdbool.h>
 #include <string.h>
 
+static void sleepMs(int ms) {
+    if (ms <= 0) return;
+    struct timespec ts;
+    ts.tv_sec = ms / 1000;
+    ts.tv_nsec = (long)(ms % 1000) * 1000000L;
+    nanosleep(&ts, NULL);
+}
+
 int casVMiliSekundach(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -117,7 +125,7 @@ int klientOtvorenie(SHM* pamat, _Bool inicializovana) {
             return -1;
         }
 
-        usleep(10 * 1000);
+        sleepMs(10);
     }
 }
 
